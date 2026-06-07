@@ -5,6 +5,16 @@ class Customer {
 	String cutomerGmail;
 	int inAppCash;
 	int totalRides;
+
+	Customer( String customerName, Stirng customerNumber, int customerRating,
+	          String customerGmail, int inAppCash, int totalRides ) {
+		this.customerName = customerName;
+		this.customerNumber = customerNumber;
+		this.customerRating = customerRating;
+		this.customerGmail = customerGmail;
+		this.inAppCash = inAppCash;
+		this.totalRides = totalRides;
+	}
 }
 
 class Driver {
@@ -13,6 +23,15 @@ class Driver {
 	int driverRating;
 	Vehicle vehicle;
 	boolean onRide;
+
+	Driver(String driverName, String driverNumber,
+	       int driverRating, Vehicle vehicle, boolean onRide) {
+		this.driverName = driverName;
+		this.driverNumber = driverNumber;
+		this.driverRating = driverRating;
+		this.vehicle = vehicle;
+		this.onRide = onRide;
+	}
 }
 
 abstract class Vehicle {
@@ -64,8 +83,14 @@ class Ride {
 
 	Ride( Customer customer, String pickUp, String dest  ) {
 		this.customer = customer;
-		this.pickUp = pickupLocation;
-		this.dest = destination;
+		this.pickupLocation = pickUp;
+		this.destination = dest;
+		generateOTP();
+	}
+
+	void generateOTP() {
+		// uniq code generated for each ride
+		otp = 123;
 	}
 
 	public void logRideHistory() {
@@ -76,7 +101,7 @@ class Ride {
 interface RideState {
 	void requestRide(Ride ride);
 	void assignRide(Ride ride);
-	void verifyOTPRide(Ride ride);
+	void verifyOTPRide(Ride ride, int otp);
 	void cancelRide(Ride ride);
 	void completeRide(Ride ride);
 }
@@ -266,12 +291,12 @@ class NearestDriver implements DriverMatchingStrategy {
 	List<Driver> allDrivers;
 	String pickupLocation;
 
-	NearestDriverStrategy(List<Driver> allDrivers, String pickupLocation) {
+	NearestDriver(List<Driver> allDrivers, String pickupLocation) {
 		this.allDrivers = allDrivers;
 		this.pickupLocation = pickupLocation;
 	}
 
-	@Overrride
+	@Override
 	public Driver findDriver() {
 		System.out.println("Finding nearest driver");
 		return allDrivers.get(0);
@@ -298,7 +323,7 @@ class RideService {
 		this.fareCalculator = fareCalc;
 	}
 
-	public Ride serachRide() {
+	public Ride serachRide(Customer customer, String pickup, String dest) {
 		Ride ride = new Ride(customer)
 		ride.currentState = new SearchingRide();
 		ride.rideCost = fareCalculator.calculateFare();
@@ -307,22 +332,22 @@ class RideService {
 		return ride;
 	}
 
-	public void beginTrip(Ride ride) {
-		ride.curretState.verifyOTP
+	public void beginTrip(Ride ride, int otp ) {
+		ride.curretState.verifyOTP(ride, otp);
 	}
 
-	public void completeTrip() {
+	public void completeTrip(Ride ride) {
 		ride.currentState.completeRide(ride);
 		ride.logRideHistory();
 	}
 
-	public void cancelTripCustomer() {
+	public void cancelTripCustomer(Ride ride) {
 		ride.currentState.cancelRide(ride);
 		Penalty penalty = new Penalty();
 		penalty.applyPenalty();
 	}
 
-	public void cancelTripDriver() {
+	public void cancelTripDriver(Ride ride) {
 		ride.currentState.cancelRide(ride);
 	}
 }
@@ -331,10 +356,34 @@ class Peality {
 	String penalityMeasure;
 
 	public int calculatePenalityAmt() {
-
+		int amt = 100;
+		System.out.println("Penalty amount is " + amt );
+		return amt;
 	}
 
 	publc void applyPenality() {
+		customer.inAppCash -= amt;
+		System.out.println("Penalty of " + amt + " applied");
+	}
+}
 
+class Main {
+	public static void main(String[] args) {
+
+		List<Driver> drivers = new ArrayList<>();
+		Driver driver1 = new Driver("Rahul", "9876543210", 4,
+		                            new Car("DL7SUB4641", "White", "BMW M5"), false);
+		drivers.add(driver1);
+
+		DriverMatchingStrategy strategy = new NearestDriverStrategy(drivers, "CP");
+		FareCalculation fareCalc = new FareCalculation("CP", "Noida", "car");
+		RideService service = new RideService(strategy, fareCalc);
+
+		Customer customer = new Customer("Arjun", "9999999999", 5,
+		                                 "arjun@gmail.com", 500, 10);
+
+		Ride ride = service.searchRide(customer, "CP", "Noida");
+		service.beginTrip(ride, 123); // otp will be provided by customer to verify is the correct otp for the ride
+		service.completeTrip(ride);
 	}
 }
